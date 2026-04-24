@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+  <title>GymTracker</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Dashboard -->
+  <div id="screen-dashboard" class="screen active"></div>
+
+  <!-- Sesión activa -->
+  <div id="screen-session" class="screen"></div>
+
+  <!-- Edición previa -->
+  <div id="screen-edit" class="screen"></div>
+
+  <!-- Progreso -->
+  <div id="screen-progress" class="screen"></div>
+
+  <!-- Perfil -->
+  <div id="screen-profile" class="screen"></div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="navigateTo('dashboard')" id="nav-dashboard">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="2" width="8" height="8" rx="2"/>
+        <rect x="12" y="2" width="8" height="8" rx="2"/>
+        <rect x="2" y="12" width="8" height="8" rx="2"/>
+        <rect x="12" y="12" width="8" height="8" rx="2"/>
+      </svg>
+      <div class="nav-dot"></div>
+      <span>Inicio</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('session')" id="nav-session">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"/>
+        <polyline points="11,7 11,11 13,13"/>
+      </svg>
+      <div class="nav-dot"></div>
+      <span>Sesión</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('progress')" id="nav-progress">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="2,16 7,10 11,12 15,6 20,3"/>
+      </svg>
+      <div class="nav-dot"></div>
+      <span>Progreso</span>
+    </div>
+    <div class="nav-item" onclick="navigateTo('profile')" id="nav-profile">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="8" r="3.5"/>
+        <path d="M4 19c0-3.9 3.1-7 7-7s7 3.1 7 7"/>
+      </svg>
+      <div class="nav-dot"></div>
+      <span>Perfil</span>
+    </div>
+  </nav>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Scripts -->
+<script src="js/data.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/session.js"></script>
+<script src="js/progress.js"></script>
+
+<script>
+// ============================================================
+// App Router
+// ============================================================
+const screens = ['dashboard', 'session', 'edit', 'progress', 'profile'];
+let currentScreen = 'dashboard';
+
+function navigateTo(screenName) {
+  screens.forEach(s => {
+    const el = document.getElementById('screen-' + s);
+    if (el) el.classList.toggle('active', s === screenName);
+    const nav = document.getElementById('nav-' + s);
+    if (nav) nav.classList.toggle('active', s === screenName);
+  });
+  currentScreen = screenName;
+
+  // Render on demand
+  if (screenName === 'dashboard') renderDashboard();
+  else if (screenName === 'session') renderSession();
+  else if (screenName === 'progress') renderProgress();
+  else if (screenName === 'profile') renderProfile();
+}
+
+// ============================================================
+// Toast
+// ============================================================
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+window.showToast = showToast;
+window.navigateTo = navigateTo;
+
+// ============================================================
+// Profile Screen
+// ============================================================
+function renderProfile() {
+  const { Storage } = window.GymData;
+  const db = Storage.getDB();
+  const settings = db.settings || {};
+  const lastWeight = (db.bodyWeight || []).slice(-1)[0];
+  document.getElementById('screen-profile').innerHTML = `
+    <div class="screen-header">
+      <h1>Perfil</h1>
+      <p>Configura tu información personal</p>
+    </div>
+
+    <div class="section">
+      <div class="section-top"><span class="section-title">Datos personales</span></div>
+      <div style="background:var(--bg2);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+        ${profileField('Nombre', settings.name || '', 'text', 'prof-name', 'Tu nombre')}
+        ${profileField('Estatura (cm)', settings.height || '', 'number', 'prof-height', '175')}
+        ${profileField('Peso actual (kg)', lastWeight?.value || '', 'number', 'prof-weight', '78.5', '0.1')}
+        ${profileField('Edad', settings.age || '', 'number', 'prof-age', '28')}
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="saveProfile()">Guardar datos</button>
+    </div>
+
+    <div class="section" style="padding-top:20px">
+      <div class="section-top"><span class="section-title">Configuración</span></div>
+      <div style="background:var(--bg2);border-radius:var(--radius-md);overflow:hidden">
+        <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <span style="font-size:14px;color:var(--text);flex:1">Unidades de peso</span>
+          <div style="display:flex;gap:6px">
+            <span class="v-chip${(settings.units||'kg')==='kg'?' active':''}" onclick="setUnits('kg',this)">kg</span>
+            <span class="v-chip${(settings.units||'kg')==='lb'?' active':''}" onclick="setUnits('lb',this)">lb</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <span style="font-size:14px;color:var(--text);flex:1">Descanso por defecto</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div onclick="adjustRest(-15)" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer">−</div>
+            <span id="rest-setting" style="font-size:14px;font-weight:500;color:var(--text);min-width:40px;text-align:center">${settings.restSeconds || 90}s</span>
+            <div onclick="adjustRest(15)" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer">+</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;padding:14px 16px">
+          <span style="font-size:14px;color:var(--text);flex:1">Semana / Ciclo actual</span>
+          <span style="font-size:13px;color:var(--text2)">Semana ${db.currentWeek || 1} · Ciclo ${db.currentCycle || 1}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:20px">
+      <div class="section-top"><span class="section-title">Datos</span></div>
+      <div style="background:var(--bg2);border-radius:var(--radius-md);overflow:hidden">
+        <div onclick="exportData()" style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer">
+          <span style="font-size:14px;color:var(--text);flex:1">Exportar datos (JSON)</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text3)" stroke-width="1.5"><polyline points="6,4 10,8 6,12"/></svg>
+        </div>
+        <div onclick="confirmReset()" style="display:flex;align-items:center;padding:14px 16px;cursor:pointer">
+          <span style="font-size:14px;color:var(--red);flex:1">Borrar todos los datos</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--red)" stroke-width="1.5"><polyline points="6,4 10,8 6,12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:24px 20px;color:var(--text3);font-size:12px">
+      GymTracker v1.0 · Datos guardados en este dispositivo
+    </div>
+  `;
+}
+
+function profileField(label, value, type, id, placeholder, step) {
+  return `
+    <div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${label}</div>
+      <input id="${id}" type="${type}" value="${value}" placeholder="${placeholder}" ${step ? `step="${step}"` : ''}
+        style="width:100%;font-size:16px;font-weight:400;border:none;border-bottom:1.5px solid var(--border2);background:transparent;color:var(--text);padding:4px 0;outline:none;font-family:var(--font)">
+    </div>`;
+}
+
+function saveProfile() {
+  const db = window.GymData.Storage.getDB();
+  db.settings = db.settings || {};
+  db.settings.name = document.getElementById('prof-name')?.value || '';
+  db.settings.height = parseFloat(document.getElementById('prof-height')?.value) || null;
+  db.settings.age = parseInt(document.getElementById('prof-age')?.value) || null;
+  const w = parseFloat(document.getElementById('prof-weight')?.value);
+  if (w) {
+    db.bodyWeight = db.bodyWeight || [];
+    db.bodyWeight.push({ value: w, date: new Date().toISOString() });
+  }
+  window.GymData.Storage.saveDB(db);
+  showToast('Perfil guardado ✓');
+}
+
+function setUnits(unit, el) {
+  el.closest('div').querySelectorAll('.v-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const db = window.GymData.Storage.getDB();
+  db.settings = db.settings || {};
+  db.settings.units = unit;
+  window.GymData.Storage.saveDB(db);
+}
+
+function adjustRest(delta) {
+  const db = window.GymData.Storage.getDB();
+  db.settings = db.settings || {};
+  const cur = db.settings.restSeconds || 90;
+  db.settings.restSeconds = Math.max(30, Math.min(300, cur + delta));
+  window.GymData.Storage.saveDB(db);
+  const el = document.getElementById('rest-setting');
+  if (el) el.textContent = db.settings.restSeconds + 's';
+}
+
+function exportData() {
+  const db = window.GymData.Storage.getDB();
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gymtracker-backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Datos exportados ✓');
+}
+
+function confirmReset() {
+  if (confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) {
+    localStorage.clear();
+    showToast('Datos borrados');
+    renderDashboard();
+    navigateTo('dashboard');
+  }
+}
+
+window.renderProfile = renderProfile;
+window.saveProfile = saveProfile;
+window.setUnits = setUnits;
+window.adjustRest = adjustRest;
+window.exportData = exportData;
+window.confirmReset = confirmReset;
+
+// ============================================================
+// Service Worker (PWA offline)
+// ============================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ============================================================
+// Init
+// ============================================================
+renderDashboard();
+renderSession();
+</script>
+</body>
+</html>
