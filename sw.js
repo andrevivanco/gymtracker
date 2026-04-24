@@ -1,12 +1,13 @@
-const CACHE = 'gymtracker-v1';
+const CACHE = 'gymtracker-v2';
+const BASE = '/gymtracker';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/css/app.css',
-  '/js/data.js',
-  '/js/dashboard.js',
-  '/js/session.js',
-  '/js/progress.js',
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/css/app.css',
+  BASE + '/js/data.js',
+  BASE + '/js/dashboard.js',
+  BASE + '/js/session.js',
+  BASE + '/js/progress.js',
   'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap'
 ];
 
