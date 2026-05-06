@@ -1,15 +1,13 @@
 // ============================================================
-// Session Edit Screen
+// Session Edit Screen — con selector de día (#9, #16)
 // ============================================================
 
 function openSessionEdit(day) {
   const { DAY_CONFIG, EXERCISES, Storage, getLastSessionData, getFavVariant } = window.GymData;
   const db = Storage.getDB();
   const config = DAY_CONFIG[day];
-
-  // Build groups for this day
   const groups = config.groups.map(gk => ({ key: gk, ...EXERCISES[gk] })).filter(Boolean);
-  const firstGroup = groups[0]?.key;
+  const allDays = ['lunes', 'miercoles', 'viernes'];
 
   document.getElementById('screen-edit').innerHTML = `
     <div style="position:sticky;top:0;z-index:10;background:var(--bg)">
@@ -22,6 +20,19 @@ function openSessionEdit(day) {
           <div style="font-size:17px;font-weight:600;color:var(--text)">${config.title}</div>
         </div>
       </div>
+
+      <!-- Selector de día (#16, #9) -->
+      <div style="display:flex;overflow-x:auto;padding:8px 20px 0;gap:6px;border-bottom:1px solid var(--border);scrollbar-width:none">
+        ${allDays.map(d => {
+          const dc = DAY_CONFIG[d];
+          const isActive = d === day;
+          return `<div onclick="openSessionEdit('${d}')"
+            style="flex-shrink:0;padding:6px 14px 10px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid ${isActive ? 'var(--text)' : 'transparent'};color:${isActive ? 'var(--text)' : 'var(--text3)'}">
+            ${dc.label}
+          </div>`;
+        }).join('')}
+      </div>
+
       <!-- Group tabs -->
       <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 20px;scrollbar-width:none">
         ${groups.map((g, i) => `
@@ -37,8 +48,7 @@ function openSessionEdit(day) {
     ${groups.map((g, i) => `
       <div id="edit-panel-${g.key}" style="display:${i === 0 ? 'block' : 'none'};padding:14px 20px 0">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <span style="font-size:12px;font-weight:500;color:var(--text2)">${g.label} · ${g.slots?.filter(s=>!s.optional&&!s.isCardio).length || 0} ejercicios</span>
-          <span style="font-size:11px;color:var(--text3)">${g.isCardio ? 'Cardio final' : ''}</span>
+          <span style="font-size:12px;font-weight:500;color:var(--text2)">${g.label} · ${g.slots?.filter(s=>!s.isCardio).length || 0} ejercicios</span>
         </div>
         ${(g.slots || []).map(slot => renderEditSlot(slot, g.key, db)).join('')}
       </div>`).join('')}
@@ -63,9 +73,10 @@ function renderEditSlot(slot, groupKey, db) {
   const last = window.GymData.getLastSessionData(db, slot.id);
   const fav = window.GymData.getFavVariant(slot);
   const isCardio = slot.isCardio;
+  const isIso = slot.isIsometric;
   return `
     <div class="ex-item selected" id="edit-${slot.id}">
-      <div class="ex-main" onclick="${slot.optional ? `toggleEditEx('${slot.id}')` : `toggleEditDetail('${slot.id}')`}">
+      <div class="ex-main" onclick="toggleEditDetail('${slot.id}')">
         <div class="ex-select-circle">
           <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,5 4,7 8,3"/></svg>
         </div>
@@ -75,8 +86,9 @@ function renderEditSlot(slot, groupKey, db) {
           <div class="ex-tags" style="margin-top:4px">
             <span class="badge badge-gray">${slot.function}</span>
             ${slot.fixed ? '<span class="badge badge-green">Fijo</span>' : '<span class="badge badge-amber">Rotativo</span>'}
-            ${slot.optional ? '<span class="badge badge-gray">Opcional</span>' : ''}
             ${slot.unilateral ? '<span class="badge badge-purple">Unilateral</span>' : ''}
+            ${isIso ? '<span class="badge badge-gray">Isométrico</span>' : ''}
+            ${slot.bodyweight ? '<span class="badge badge-gray">Peso corporal</span>' : ''}
           </div>
         </div>
         <div>
@@ -91,15 +103,15 @@ function renderEditSlot(slot, groupKey, db) {
           `).join('')}
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-          <span style="font-size:11px;color:var(--text3);flex:1">${isCardio ? 'Duración' : 'Series'}</span>
+          <span style="font-size:11px;color:var(--text3);flex:1">${isCardio ? 'Duración' : isIso ? 'Series' : 'Series'}</span>
           <div style="display:flex;align-items:center;gap:10px">
             <div onclick="adjustEditSeries('${slot.id}', -1${isCardio ? ', true' : ''})" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">−</div>
             <span id="series-count-${slot.id}" style="font-size:15px;font-weight:500;color:var(--text);min-width:24px;text-align:center">${isCardio ? (slot.defaultMinutes || 10) : slot.sets}</span>
             <div onclick="adjustEditSeries('${slot.id}', 1${isCardio ? ', true' : ''})" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">+</div>
-            <span style="font-size:11px;color:var(--text3)">${isCardio ? 'min' : '× ' + slot.reps + ' reps'}</span>
+            <span style="font-size:11px;color:var(--text3)">${isCardio ? 'min' : isIso ? '× tiempo' : '× ' + slot.reps + ' reps'}</span>
           </div>
         </div>
-        ${last ? `<div style="font-size:11px;color:var(--text3)">Semana pasada: <strong style="color:var(--text)">${last.weight} kg · ${last.reps} reps</strong></div>` : `<div style="font-size:11px;color:var(--text3)">Sin datos previos — primera vez</div>`}
+        ${last ? `<div style="font-size:11px;color:var(--text3)">Semana pasada: <strong style="color:var(--text)">${last.weight > 0 ? last.weight + ' kg · ' : ''}${last.reps} reps</strong></div>` : `<div style="font-size:11px;color:var(--text3)">Sin datos previos — primera vez</div>`}
       </div>
     </div>`;
 }
@@ -150,11 +162,11 @@ window.adjustEditSeries = adjustEditSeries;
 
 
 // ============================================================
-// Progress Screen
+// Progress Screen — con medidas corporales (#17)
 // ============================================================
 
 function renderProgress() {
-  const { Storage, EXERCISES, estimateOneRM, formatDate } = window.GymData;
+  const { Storage } = window.GymData;
   const db = Storage.getDB();
 
   document.getElementById('screen-progress').innerHTML = `
@@ -197,7 +209,7 @@ function renderProgress() {
         <div class="section-top"><span class="section-title">Progresión de carga</span></div>
         ${getMuscleProgress(db)}
         <div style="margin-top:16px">
-          <div class="section-top"><span class="section-title">Toneladas por semana</span></div>
+          <div class="section-top"><span class="section-title">Volumen por sesión</span></div>
           ${renderVolumeBars(db)}
         </div>
       </div>
@@ -211,11 +223,15 @@ function renderProgress() {
           <span class="section-link" onclick="openWeightLog()">+ registrar</span>
         </div>
         ${renderBodyWeightChart(db)}
-        <div class="section-top" style="margin-top:20px">
-          <span class="section-title">Medidas</span>
-          <span class="section-link" onclick="openMeasuresLog()">+ registrar</span>
+
+        <div style="margin-top:20px">
+          <div class="section-top">
+            <span class="section-title">Medidas corporales</span>
+            <span class="section-link" onclick="openMeasuresLog()">+ registrar</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Se actualizan cada 4 semanas (por ciclo)</div>
+          ${renderMeasuresHistory(db)}
         </div>
-        ${renderMeasures(db)}
       </div>
     </div>
 
@@ -229,7 +245,7 @@ function renderProgress() {
 }
 
 function getProgressExercises(db) {
-  const ids = ['press_plano','press_inclinado','jalon','remo_bilateral','curl_martillo','hip_thrust','press_frances','prensa'];
+  const ids = ['press_plano','press_inclinado','jalon','remo_bilateral','curl_martillo','hip_thrust','press_frances','prensa','abd_inclinado'];
   return ids.map(id => {
     const allEx = Object.values(window.GymData.EXERCISES).flatMap(g => g.slots || []);
     const ex = allEx.find(e => e.id === id);
@@ -246,22 +262,56 @@ function renderProgressChart(db, exId) {
   for (const session of db.sessions) {
     for (const sEx of (session.exercises || [])) {
       if (sEx.exerciseId === exId) {
-        const best = (sEx.sets || []).reduce((b, s) => (!b || s.weight > b.weight) ? s : b, null);
-        if (best) data.push({ date: session.date, weight: best.weight, reps: best.reps });
+        if (ex.isIsometric) {
+          const totalSec = (sEx.sets || []).reduce((a, s) => a + (s.seconds || 0), 0);
+          if (totalSec > 0) data.push({ date: session.date, seconds: totalSec });
+        } else {
+          const best = (sEx.sets || []).reduce((b, s) => (!b || s.weight > b.weight) ? s : b, null);
+          if (best && (best.weight > 0 || best.reps > 0)) data.push({ date: session.date, weight: best.weight || 0, reps: best.reps || 0 });
+        }
       }
     }
   }
   if (!data.length) return `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Sin datos para este ejercicio</div>`;
   const last = data[data.length - 1];
   const first = data[0];
+
+  if (ex.isIsometric) {
+    const vals = data.map(d => d.seconds);
+    const mn = Math.min(...vals), mx = Math.max(...vals) + 5;
+    const W = 300, H = 70;
+    const pts = vals.map((v, i) => {
+      const x = Math.round((i / Math.max(1, vals.length - 1)) * W);
+      const y = Math.round(H - ((v - mn) / Math.max(1, mx - mn)) * H);
+      return `${x},${y}`;
+    }).join(' ');
+    const lp = pts.split(' ').pop().split(',');
+    return `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">${ex.name}</div></div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:600;color:var(--text)">${Math.floor(last.seconds/60)}:${String(last.seconds%60).padStart(2,'0')}</div>
+          <div style="font-size:12px;color:var(--text3)">tiempo total</div>
+        </div>
+      </div>
+      <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        <polyline fill="none" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${pts}"/>
+        <circle cx="${lp[0]}" cy="${lp[1]}" r="3" fill="var(--text)"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:10px;color:var(--text3)">${window.GymData.formatDate(first.date)}</span>
+        <span style="font-size:10px;color:var(--text3)">${window.GymData.formatDate(last.date)}</span>
+      </div>`;
+  }
+
   const delta = (last.weight - first.weight).toFixed(1);
-  const oneRM = window.GymData.estimateOneRM(last.weight, last.reps);
-  const vals = data.map(d => d.weight);
+  const oneRM = last.weight > 0 && last.reps > 0 ? window.GymData.estimateOneRM(last.weight, last.reps) : null;
+  const vals = data.map(d => d.weight || d.reps);
   const mn = Math.min(...vals) - 2, mx = Math.max(...vals) + 2;
   const W = 300, H = 70;
   const pts = vals.map((v, i) => {
     const x = Math.round((i / Math.max(1, vals.length - 1)) * W);
-    const y = Math.round(H - ((v - mn) / (mx - mn)) * H);
+    const y = Math.round(H - ((v - mn) / Math.max(1, mx - mn)) * H);
     return `${x},${y}`;
   }).join(' ');
   const lp = pts.split(' ').pop().split(',');
@@ -269,11 +319,11 @@ function renderProgressChart(db, exId) {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--text)">${ex.name}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${ex.reps} reps</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${ex.reps || ''} reps</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:26px;font-weight:600;color:var(--text);letter-spacing:-.5px">${last.weight} kg</div>
-        <div style="font-size:12px;font-weight:500;color:var(--green)">${parseFloat(delta) >= 0 ? '+' : ''}${delta} kg</div>
+        <div style="font-size:26px;font-weight:600;color:var(--text);letter-spacing:-.5px">${last.weight > 0 ? last.weight + ' kg' : last.reps + ' reps'}</div>
+        ${last.weight > 0 ? `<div style="font-size:12px;font-weight:500;color:var(--green)">${parseFloat(delta) >= 0 ? '+' : ''}${delta} kg</div>` : ''}
       </div>
     </div>
     <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
@@ -282,7 +332,7 @@ function renderProgressChart(db, exId) {
     </svg>
     <div style="display:flex;justify-content:space-between;margin-top:4px">
       <span style="font-size:10px;color:var(--text3)">${window.GymData.formatDate(first.date)}</span>
-      <span style="font-size:10px;color:var(--text3)">1RM est. ${oneRM} kg</span>
+      ${oneRM ? `<span style="font-size:10px;color:var(--text3)">1RM est. ${oneRM} kg</span>` : ''}
       <span style="font-size:10px;color:var(--text3)">${window.GymData.formatDate(last.date)}</span>
     </div>`;
 }
@@ -312,7 +362,7 @@ function getPRCards(db) {
       <div style="font-size:11px;color:var(--text3);margin-bottom:4px;line-height:1.3">${pr.name}</div>
       <div style="font-size:20px;font-weight:600;color:var(--text);line-height:1">${pr.weight} <span style="font-size:12px;color:var(--text3)">kg</span> <span class="badge badge-green" style="font-size:9px">PR</span></div>
       <div style="font-size:11px;color:var(--text3);margin-top:3px">1RM est. ${window.GymData.estimateOneRM(pr.weight, pr.reps)} kg</div>
-    </div>`).join('') || `<div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--text3);font-size:13px">Sin PRs registrados aún</div>`;
+    </div>`).join('') || `<div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--text3);font-size:13px">Sin PRs aún</div>`;
 }
 
 function getMuscleProgress(db) {
@@ -323,6 +373,7 @@ function getMuscleProgress(db) {
     { key: 'biceps', label: 'Bíceps', color: '#BA7517' },
     { key: 'pierna', label: 'Pierna', color: '#3B6D11' },
     { key: 'gluteo', label: 'Glúteo', color: '#0F6E56' },
+    { key: 'abdomen', label: 'Abdomen', color: '#993C1D' },
   ];
   return `<div style="display:flex;flex-direction:column;gap:10px">` +
     muscles.map(m => {
@@ -356,7 +407,7 @@ function renderVolumeBars(db) {
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:6px">
         <span style="font-size:10px;color:var(--text3)">sesiones anteriores</span>
-        <span style="font-size:11px;font-weight:500;color:var(--text)">${(db.sessions.slice(-1)[0]?.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(s=>s.completed).length,0)} series · última sesión</span>
+        <span style="font-size:11px;font-weight:500;color:var(--text)">${(db.sessions.slice(-1)[0]?.exercises||[]).reduce((t,e)=>t+(e.sets||[]).filter(s=>s.completed).length,0)} series · última</span>
       </div>
     </div>`;
 }
@@ -375,7 +426,7 @@ function renderBodyWeightChart(db) {
   const W = 300, H = 60;
   const pts = vals.map((v, i) => {
     const x = Math.round((i / Math.max(1, vals.length - 1)) * W);
-    const y = Math.round(H - ((v - mn) / (mx - mn)) * H);
+    const y = Math.round(H - ((v - mn) / Math.max(1, mx - mn)) * H);
     return `${x},${y}`;
   }).join(' ');
   const lp = pts.split(' ').pop().split(',');
@@ -397,42 +448,94 @@ function renderBodyWeightChart(db) {
     </div>`;
 }
 
-function renderMeasures(db) {
+// Medidas corporales con historial por ciclo (#17)
+const MEASURE_FIELDS = [
+  { key: 'chest', label: 'Pecho', icon: '💪' },
+  { key: 'waist', label: 'Cintura', icon: '📏' },
+  { key: 'hips', label: 'Cadera', icon: '📐' },
+  { key: 'arm', label: 'Brazo', icon: '💪' },
+  { key: 'thigh', label: 'Muslo', icon: '🦵' },
+  { key: 'calf', label: 'Pantorrilla', icon: '🦵' },
+  { key: 'shoulder', label: 'Hombros', icon: '📏' },
+  { key: 'neck', label: 'Cuello', icon: '📏' },
+];
+
+function renderMeasuresHistory(db) {
   const measures = db.bodyMeasures || [];
-  const fields = [
-    { key: 'chest', label: 'Pecho' },
-    { key: 'waist', label: 'Cintura' },
-    { key: 'arm', label: 'Brazo' },
-    { key: 'thigh', label: 'Muslo' },
-  ];
   if (!measures.length) return `
     <div style="background:var(--bg2);border-radius:var(--radius-md);padding:16px;text-align:center;color:var(--text3);font-size:13px">
-      Sin medidas registradas. <span style="color:var(--text);text-decoration:underline;cursor:pointer" onclick="openMeasuresLog()">Registrar ahora</span>
+      Sin medidas registradas.<br>
+      <span style="color:var(--text);text-decoration:underline;cursor:pointer;margin-top:6px;display:inline-block" onclick="openMeasuresLog()">Registrar medidas</span>
     </div>`;
+
   const last = measures[measures.length - 1];
   const prev = measures.length > 1 ? measures[measures.length - 2] : null;
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">` +
-    fields.map(f => {
-      const val = last[f.key];
-      const pval = prev ? prev[f.key] : null;
-      const delta = (val && pval) ? (val - pval).toFixed(1) : null;
-      return `
-        <div style="background:var(--bg2);border-radius:var(--radius-md);padding:10px 12px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${f.label}</div>
-          <div style="font-size:20px;font-weight:600;color:var(--text)">${val || '—'} <span style="font-size:12px;color:var(--text3)">${val ? 'cm' : ''}</span></div>
-          ${delta !== null ? `<div style="font-size:11px;font-weight:500;margin-top:3px;color:${parseFloat(delta) > 0 ? 'var(--green)' : 'var(--red)'}">${parseFloat(delta) > 0 ? '+' : ''}${delta} cm</div>` : ''}
-        </div>`;
-    }).join('') + `</div>`;
+  const filledFields = MEASURE_FIELDS.filter(f => last[f.key]);
+
+  return `
+    <div style="background:var(--bg2);border-radius:var(--radius-md);overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Última medición · ${window.GymData.formatDate(last.date)}</span>
+        ${db.currentCycle ? `<span class="badge badge-gray">Ciclo ${db.currentCycle}</span>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+        ${filledFields.map((f, i) => {
+          const val = last[f.key];
+          const pval = prev ? prev[f.key] : null;
+          const delta = (val && pval) ? (val - pval).toFixed(1) : null;
+          const isLast = i === filledFields.length - 1 && filledFields.length % 2 !== 0;
+          return `
+            <div style="padding:12px 14px;${i % 2 === 0 && i !== filledFields.length - 1 ? 'border-right:1px solid var(--border);' : ''}border-bottom:${i < filledFields.length - (filledFields.length % 2 === 0 ? 2 : 1) ? '1px solid var(--border)' : 'none'};${isLast ? 'grid-column:1/-1;' : ''}">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px">${f.label}</div>
+              <div style="font-size:22px;font-weight:600;color:var(--text);line-height:1">${val} <span style="font-size:12px;font-weight:400;color:var(--text3)">cm</span></div>
+              ${delta !== null ? `<div style="font-size:11px;font-weight:500;margin-top:3px;color:${f.key === 'waist' ? (parseFloat(delta) < 0 ? 'var(--green)' : 'var(--amber)') : (parseFloat(delta) > 0 ? 'var(--green)' : 'var(--text3)'}">
+                ${parseFloat(delta) > 0 ? '+' : ''}${delta} cm
+              </div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>
+
+      ${measures.length > 1 ? `
+      <div style="padding:10px 14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Historial</div>
+        <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+          ${measures.slice(-4).reverse().map((m, i) => `
+            <div style="flex-shrink:0;padding:6px 12px;background:${i === 0 ? 'var(--bg3)' : 'var(--bg)'};border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="showMeasureDetail(${measures.length - 1 - i})">
+              <div style="font-size:10px;color:var(--text3)">${window.GymData.formatDate(m.date)}</div>
+              ${m.chest ? `<div style="font-size:12px;font-weight:500;color:var(--text);margin-top:2px">Pecho ${m.chest}cm</div>` : ''}
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
 }
+
+window.showMeasureDetail = function(idx) {
+  const db = window.GymData.Storage.getDB();
+  const m = db.bodyMeasures[idx];
+  if (!m) return;
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end';
+  const fields = MEASURE_FIELDS.filter(f => m[f.key]);
+  modal.innerHTML = `
+    <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;animation:slideUp .2s ease">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">Medición del ${window.GymData.formatDate(m.date)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        ${fields.map(f => `
+          <div style="background:var(--bg2);border-radius:var(--radius-md);padding:10px 12px">
+            <div style="font-size:11px;color:var(--text3)">${f.label}</div>
+            <div style="font-size:20px;font-weight:600;color:var(--text)">${m[f.key]} <span style="font-size:12px;color:var(--text3)">cm</span></div>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-ghost" style="margin-top:16px" onclick="this.closest('[style*=fixed]').remove()">Cerrar</button>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+};
 
 function renderAttendance(db) {
   const sessions = db.sessions || [];
   const total = sessions.length;
   const streak = window.GymData.getStreak(db);
-  const weekDone = window.GymData.getThisWeekDone(db);
-  const consistency = total > 0 ? Math.round((total / Math.max(1, streak * 3 || 1)) * 100) : 0;
-
-  // Group sessions by week
   const byWeek = {};
   sessions.forEach(s => {
     const d = new Date(s.date);
@@ -444,6 +547,7 @@ function renderAttendance(db) {
     byWeek[key].push(s.day);
   });
   const weeks = Object.entries(byWeek).slice(-8).reverse();
+  const avgDur = sessions.length ? Math.round(sessions.reduce((t, s) => t + (s.durationSeconds || 0), 0) / sessions.length) : 0;
 
   return `
     <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:14px">
@@ -473,15 +577,12 @@ function renderAttendance(db) {
 
     <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px 14px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">Duración promedio</div>
-      ${sessions.length ? (() => {
-        const avg = Math.round(sessions.reduce((t, s) => t + (s.durationSeconds || 0), 0) / sessions.length);
-        return `
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:28px;font-weight:600;color:var(--text);letter-spacing:-.5px">${Math.floor(avg/60)}:${String(avg%60).padStart(2,'0')}</span>
-            <span style="font-size:13px;color:var(--text3)">min promedio</span>
-            <span style="font-size:12px;font-weight:500;color:var(--green);margin-left:auto">${avg <= 105*60 ? 'dentro del límite' : 'sobre el límite'}</span>
-          </div>`;
-      })() : `<div style="color:var(--text3);font-size:13px">Sin datos aún</div>`}
+      ${avgDur > 0 ? `
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span style="font-size:28px;font-weight:600;color:var(--text);letter-spacing:-.5px">${Math.floor(avgDur/60)}:${String(avgDur%60).padStart(2,'0')}</span>
+          <span style="font-size:13px;color:var(--text3)">min promedio</span>
+          <span style="font-size:12px;font-weight:500;color:var(--green);margin-left:auto">${avgDur <= 105*60 ? 'dentro del límite' : 'sobre el límite'}</span>
+        </div>` : `<div style="color:var(--text3);font-size:13px">Sin datos aún</div>`}
     </div>`;
 }
 
@@ -495,19 +596,23 @@ function switchProgressTab(el, panelId) {
 }
 
 function openMeasuresLog() {
+  const db = window.GymData.Storage.getDB();
+  const lastM = (db.bodyMeasures || []).slice(-1)[0] || {};
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;overflow-y:auto';
   modal.className = 'measures-modal';
   modal.innerHTML = `
     <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;animation:slideUp .25s ease">
-      <div style="font-size:17px;font-weight:600;margin-bottom:16px">Registrar medidas</div>
-      ${[{k:'chest',l:'Pecho (cm)'},{k:'waist',l:'Cintura (cm)'},{k:'arm',l:'Brazo (cm)'},{k:'thigh',l:'Muslo (cm)'}].map(f => `
+      <div style="font-size:17px;font-weight:600;margin-bottom:4px">Medidas corporales</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Ciclo ${db.currentCycle || 1} · Semana ${db.currentWeek || 1}</div>
+      ${MEASURE_FIELDS.map(f => `
         <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${f.l}</div>
-          <input id="m-${f.k}" type="number" step="0.5" min="20" max="200" placeholder="—"
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${f.label} (cm)</div>
+          <input id="m-${f.key}" type="number" step="0.5" min="20" max="200" placeholder="${lastM[f.key] || '—'}"
+            value="${lastM[f.key] || ''}"
             style="width:100%;font-size:20px;font-weight:500;border:none;border-bottom:1.5px solid var(--border2);background:transparent;color:var(--text);padding:4px 0;outline:none;font-family:var(--font-mono)">
         </div>`).join('')}
-      <button class="btn btn-primary" style="margin-top:8px" onclick="saveMeasures()">Guardar</button>
+      <button class="btn btn-primary" style="margin-top:8px" onclick="saveMeasures()">Guardar medidas</button>
       <button class="btn btn-ghost" style="margin-top:8px" onclick="document.querySelector('.measures-modal').remove()">Cancelar</button>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
@@ -518,11 +623,12 @@ function saveMeasures() {
   const db = window.GymData.Storage.getDB();
   db.bodyMeasures = db.bodyMeasures || [];
   const entry = { date: new Date().toISOString() };
-  ['chest','waist','arm','thigh'].forEach(k => {
-    const v = parseFloat(document.getElementById('m-' + k)?.value);
-    if (v) entry[k] = v;
+  MEASURE_FIELDS.forEach(f => {
+    const v = parseFloat(document.getElementById('m-' + f.key)?.value);
+    if (v && v > 0) entry[f.key] = v;
   });
-  if (!Object.keys(entry).length > 1) { showToast('Ingresa al menos una medida'); return; }
+  const hasData = Object.keys(entry).length > 1;
+  if (!hasData) { showToast('Ingresa al menos una medida'); return; }
   db.bodyMeasures.push(entry);
   window.GymData.Storage.saveDB(db);
   document.querySelector('.measures-modal')?.remove();

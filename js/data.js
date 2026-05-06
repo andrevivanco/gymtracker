@@ -4,6 +4,57 @@
 
 const DB_KEY = 'gymtracker_v1';
 
+// Base de datos completa de ejercicios (para búsqueda y ejercicios custom)
+const EXERCISE_LIBRARY = [
+  // Pecho
+  { id: 'press_inclinado', name: 'Press inclinado', muscle: 'pecho', function: 'amplitud' },
+  { id: 'press_plano', name: 'Press plano', muscle: 'pecho', function: 'carga' },
+  { id: 'press_declinado', name: 'Press declinado', muscle: 'pecho', function: 'carga' },
+  { id: 'aperturas', name: 'Aperturas / fly', muscle: 'pecho', function: 'contracción' },
+  { id: 'pullover', name: 'Pullover', muscle: 'pecho', function: 'amplitud' },
+  // Tríceps
+  { id: 'press_frances', name: 'Press francés', muscle: 'triceps', function: 'cabeza larga' },
+  { id: 'extension_polea', name: 'Extensión en polea', muscle: 'triceps', function: 'contracción' },
+  { id: 'fondos', name: 'Fondos / paralelas', muscle: 'triceps', function: 'compuesto' },
+  { id: 'kickback', name: 'Kickback tríceps', muscle: 'triceps', function: 'aislado' },
+  // Hombro
+  { id: 'elev_laterales', name: 'Elevaciones laterales', muscle: 'hombro', function: 'lateral' },
+  { id: 'elev_frontales', name: 'Elevaciones frontales', muscle: 'hombro', function: 'frontal' },
+  { id: 'press_militar', name: 'Press militar', muscle: 'hombro', function: 'press' },
+  { id: 'vuelos', name: 'Vuelos / pájaros', muscle: 'hombro', function: 'posterior' },
+  { id: 'face_pull', name: 'Face pull', muscle: 'hombro', function: 'posterior' },
+  // Espalda
+  { id: 'jalon', name: 'Jalón al pecho', muscle: 'espalda', function: 'amplitud' },
+  { id: 'remo_bilateral', name: 'Remo bilateral', muscle: 'espalda', function: 'densidad' },
+  { id: 'remo_unilateral', name: 'Remo unilateral', muscle: 'espalda', function: 'unilateral' },
+  { id: 'dominadas', name: 'Dominadas', muscle: 'espalda', function: 'amplitud' },
+  { id: 'remo_maquina', name: 'Remo en máquina', muscle: 'espalda', function: 'densidad' },
+  // Bíceps
+  { id: 'curl_martillo', name: 'Curl martillo', muscle: 'biceps', function: 'braquial' },
+  { id: 'curl_predicador', name: 'Curl predicador', muscle: 'biceps', function: 'cabeza larga' },
+  { id: 'curl_pie', name: 'Curl bíceps de pie', muscle: 'biceps', function: 'cabeza corta' },
+  { id: 'curl_concentrado', name: 'Curl concentrado', muscle: 'biceps', function: 'cabeza larga' },
+  // Abdomen
+  { id: 'crunch', name: 'Crunch con carga', muscle: 'abdomen', function: 'dinámico' },
+  { id: 'abd_inclinado', name: 'Abdominal inclinado en banco', muscle: 'abdomen', function: 'dinámico' },
+  { id: 'elevacion_piernas', name: 'Elevación de piernas', muscle: 'abdomen', function: 'dinámico' },
+  { id: 'plancha', name: 'Plancha', muscle: 'abdomen', function: 'isométrico', isIsometric: true },
+  { id: 'plancha_lateral', name: 'Plancha lateral', muscle: 'abdomen', function: 'isométrico', isIsometric: true },
+  { id: 'russian_twist', name: 'Russian twist', muscle: 'abdomen', function: 'rotacional' },
+  { id: 'crunch_maquina', name: 'Crunch en máquina', muscle: 'abdomen', function: 'dinámico' },
+  // Pierna
+  { id: 'prensa', name: 'Prensa de piernas', muscle: 'pierna', function: 'compuesto' },
+  { id: 'sentadilla', name: 'Sentadilla', muscle: 'pierna', function: 'compuesto' },
+  { id: 'extension_cuad', name: 'Extensión cuádriceps', muscle: 'pierna', function: 'aislado' },
+  { id: 'peso_muerto_rumano', name: 'Peso muerto rumano', muscle: 'pierna', function: 'cadena post.' },
+  { id: 'curl_femoral', name: 'Curl femoral', muscle: 'pierna', function: 'aislado' },
+  { id: 'zancadas', name: 'Zancadas', muscle: 'pierna', function: 'compuesto' },
+  // Glúteo
+  { id: 'hip_thrust', name: 'Hip thrust', muscle: 'gluteo', function: 'compuesto' },
+  { id: 'abductores', name: 'Abductores en máquina', muscle: 'gluteo', function: 'abductor' },
+  { id: 'patada_gluteo', name: 'Patada de glúteo', muscle: 'gluteo', function: 'aislado' },
+];
+
 const EXERCISES = {
   pecho: {
     label: 'Pecho',
@@ -28,7 +79,7 @@ const EXERCISES = {
         name: 'Press plano',
         focus: 'Pectoral mayor · carga máxima',
         function: 'carga',
-        sets: 4, reps: '8–10',
+        sets: 3, reps: '8–10',
         fixed: true,
         variants: [
           { id: 'barra', label: 'Barra', fav: true },
@@ -41,7 +92,7 @@ const EXERCISES = {
         name: 'Aperturas / fly',
         focus: 'Contracción y estiramiento',
         function: 'contracción',
-        sets: 4, reps: '12–15',
+        sets: 3, reps: '12–15',
         fixed: false,
         variants: [
           { id: 'maquina_fly', label: 'Máquina fly', fav: true },
@@ -61,7 +112,7 @@ const EXERCISES = {
         name: 'Press francés / rompe cráneo',
         focus: 'Cabeza larga en estiramiento',
         function: 'cabeza larga',
-        sets: 4, reps: '10–12',
+        sets: 3, reps: '10–12',
         fixed: true,
         variants: [
           { id: 'barra_z', label: 'Barra Z', fav: true },
@@ -73,7 +124,7 @@ const EXERCISES = {
         name: 'Extensión en polea',
         focus: 'Cabeza medial y lateral · contracción',
         function: 'contracción',
-        sets: 4, reps: '12–15',
+        sets: 3, reps: '12–15',
         fixed: false,
         variants: [
           { id: 'cuerda', label: 'Cuerda', fav: true },
@@ -86,11 +137,11 @@ const EXERCISES = {
         name: 'Fondos en máquina / paralelas',
         focus: 'Carga compuesta · cierre de sesión',
         function: 'compuesto',
-        sets: 4, reps: '10–12',
+        sets: 3, reps: '10–12',
         fixed: false,
         variants: [
           { id: 'maquina', label: 'Máquina fondos', fav: true },
-          { id: 'paralelas', label: 'Paralelas peso corporal' }
+          { id: 'paralelas', label: 'Paralelas peso corporal', bodyweight: true }
         ]
       }
     ]
@@ -106,50 +157,8 @@ const EXERCISES = {
         focus: 'Deltoides medio · recomendado siempre',
         function: 'lateral',
         sets: 4, reps: '15–20',
-        fixed: false,
-        optional: true,
+        fixed: true,
         variants: [{ id: 'mancuernas', label: 'Mancuernas', fav: true }]
-      },
-      {
-        id: 'elev_frontales',
-        name: 'Elevaciones frontales',
-        focus: 'Deltoides anterior',
-        function: 'frontal',
-        sets: 4, reps: '12–15',
-        fixed: false,
-        optional: true,
-        variants: [
-          { id: 'mancuernas', label: 'Mancuernas', fav: true },
-          { id: 'barra', label: 'Barra' },
-          { id: 'disco', label: 'Disco' }
-        ]
-      },
-      {
-        id: 'press_militar_l',
-        name: 'Press militar',
-        focus: 'Compuesto · deltoides anterior + medio',
-        function: 'press',
-        sets: 4, reps: '10–12',
-        fixed: false,
-        optional: true,
-        variants: [
-          { id: 'mancuernas', label: 'Mancuernas' },
-          { id: 'maquina', label: 'Máquina' },
-          { id: 'barra', label: 'Barra' }
-        ]
-      },
-      {
-        id: 'vuelos',
-        name: 'Vuelos laterales / pájaros',
-        focus: 'Deltoides posterior',
-        function: 'posterior',
-        sets: 4, reps: '15–20',
-        fixed: false,
-        optional: true,
-        variants: [
-          { id: 'mancuernas', label: 'Mancuernas', fav: true },
-          { id: 'maquina_fly', label: 'Máquina fly' }
-        ]
       }
     ]
   },
@@ -261,14 +270,15 @@ const EXERCISES = {
     day: 'viernes',
     slots: [
       {
-        id: 'crunch',
-        name: 'Crunch con carga',
-        focus: 'Recto abdominal · progresión con peso',
+        id: 'abd_inclinado',
+        name: 'Abdominal inclinado en banco',
+        focus: 'Recto abdominal · rango completo',
         function: 'dinámico',
         sets: 4, reps: '12–15',
-        fixed: false,
+        fixed: true,
         variants: [
-          { id: 'maquina', label: 'Máquina crunch', fav: true },
+          { id: 'banco_inclinado', label: 'Banco inclinado', fav: true },
+          { id: 'maquina', label: 'Máquina crunch' },
           { id: 'polea', label: 'Polea arrodillado' }
         ]
       },
@@ -279,6 +289,7 @@ const EXERCISES = {
         function: 'dinámico',
         sets: 4, reps: '10–12',
         fixed: false,
+        bodyweight: true,
         variants: [
           { id: 'colgado', label: 'Colgado en barra', fav: true },
           { id: 'banco', label: 'En banco plano' }
@@ -290,7 +301,9 @@ const EXERCISES = {
         focus: 'Core profundo + oblicuos',
         function: 'isométrico',
         sets: 3, reps: '35–45 seg',
+        isIsometric: true,
         fixed: false,
+        bodyweight: true,
         variants: [
           { id: 'frontal', label: 'Plancha frontal', fav: true },
           { id: 'lateral', label: 'Plancha lateral' },
@@ -314,18 +327,6 @@ const EXERCISES = {
         variants: [{ id: 'maquina', label: 'Máquina prensa', fav: true }]
       },
       {
-        id: 'peso_muerto_rumano',
-        name: 'Peso muerto rumano',
-        focus: 'Isquiotibiales + glúteo · cadena posterior',
-        function: 'cadena post.',
-        sets: 4, reps: '10–12',
-        fixed: true,
-        variants: [
-          { id: 'barra', label: 'Barra', fav: true },
-          { id: 'mancuernas', label: 'Mancuernas' }
-        ]
-      },
-      {
         id: 'extension_cuad',
         name: 'Extensión cuádriceps',
         focus: 'Aislado · rango completo de rodilla',
@@ -343,26 +344,28 @@ const EXERCISES = {
     slots: [
       {
         id: 'hip_thrust',
-        name: 'Hip thrust',
+        name: 'Hip thrust / Abductores',
         focus: 'Glúteo mayor · más efectivo',
         function: 'compuesto',
         sets: 4, reps: '10–12',
-        fixed: true,
+        fixed: false,
         variants: [
-          { id: 'barra', label: 'Barra en banco', fav: true },
-          { id: 'maquina', label: 'Máquina hip thrust' }
+          { id: 'barra', label: 'Hip thrust con barra', fav: true },
+          { id: 'maquina', label: 'Máquina hip thrust' },
+          { id: 'abductores', label: 'Abductores en máquina' }
         ]
       },
       {
-        id: 'curl_femoral',
-        name: 'Curl femoral',
-        focus: 'Isquiotibiales aislado',
-        function: 'aislado',
-        sets: 4, reps: '12–15',
+        id: 'peso_muerto_rumano',
+        name: 'Peso muerto rumano / Curl isquio',
+        focus: 'Isquiotibiales · cadena posterior',
+        function: 'cadena post.',
+        sets: 4, reps: '10–12',
         fixed: false,
         variants: [
-          { id: 'tumbado', label: 'Máquina tumbado', fav: true },
-          { id: 'sentado', label: 'Máquina sentado' }
+          { id: 'peso_rumano', label: 'Peso muerto rumano', fav: true },
+          { id: 'curl_tumbado', label: 'Curl isquio tumbado' },
+          { id: 'curl_sentado', label: 'Curl isquio sentado' }
         ]
       }
     ]
@@ -374,7 +377,7 @@ const EXERCISES = {
     slots: [
       {
         id: 'trote',
-        name: 'Trote',
+        name: 'Cardio final',
         focus: 'Cardio baja intensidad · 60–65% FCmax',
         function: 'cardio',
         sets: 1, reps: '10 min',
@@ -397,26 +400,26 @@ const DAY_CONFIG = {
     title: 'Pecho · Tríceps · Hombro',
     groups: ['pecho', 'triceps', 'hombro_lunes', 'cardio'],
     color: '#534AB7',
-    estimatedMin: 105
+    estimatedMin: 100
   },
   miercoles: {
     label: 'Miércoles',
     title: 'Espalda · Bíceps · Hombro',
     groups: ['espalda', 'biceps', 'hombro_miercoles', 'cardio'],
     color: '#185FA5',
-    estimatedMin: 100
+    estimatedMin: 95
   },
   viernes: {
     label: 'Viernes',
     title: 'Abdomen · Pierna · Glúteo',
     groups: ['abdomen', 'pierna', 'gluteo', 'cardio'],
     color: '#3B6D11',
-    estimatedMin: 95
+    estimatedMin: 90
   }
 };
 
 // ============================================================
-// Storage
+// Storage — con auto-save periódico para evitar pérdida de datos
 // ============================================================
 const Storage = {
   get(key, fallback = null) {
@@ -426,7 +429,9 @@ const Storage = {
     } catch { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem(DB_KEY + '_' + key, JSON.stringify(value)); } catch {}
+    try { localStorage.setItem(DB_KEY + '_' + key, JSON.stringify(value)); } catch(e) {
+      console.error('Storage error:', e);
+    }
   },
   getDB() {
     return this.get('db', {
@@ -517,7 +522,6 @@ function getWeeklyVolume(db, muscleGroup) {
 }
 
 function getStreak(db) {
-  const days = ['lunes', 'miercoles', 'viernes'];
   if (!db.sessions.length) return 0;
   let streak = 0;
   const sessionDates = db.sessions.map(s => s.date.split('T')[0]);
@@ -556,4 +560,9 @@ function getThisWeekDone(db) {
   return done;
 }
 
-window.GymData = { EXERCISES, DAY_CONFIG, Storage, getFavVariant, getTodayDay, getNextDay, getUpcomingDay, formatTime, formatDate, estimateOneRM, getLastSessionData, getWeeklyVolume, getStreak, getThisWeekDone };
+window.GymData = {
+  EXERCISES, EXERCISE_LIBRARY, DAY_CONFIG, Storage,
+  getFavVariant, getTodayDay, getNextDay, getUpcomingDay,
+  formatTime, formatDate, estimateOneRM,
+  getLastSessionData, getWeeklyVolume, getStreak, getThisWeekDone
+};
