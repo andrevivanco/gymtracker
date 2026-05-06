@@ -266,6 +266,20 @@ window.confirmReset = confirmReset;
 // ============================================================
 renderDashboard();
 renderSession();
+
+// Restaurar sesión en progreso si existe (#11)
+setTimeout(() => {
+  if (window.restoreSessionIfExists) {
+    restoreSessionIfExists();
+  }
+}, 300);
+
+// Pedir permiso de notificaciones para el timer (#3)
+setTimeout(() => {
+  if (window.requestNotificationPermission) {
+    requestNotificationPermission();
+  }
+}, 2000);
 </script>
 </body>
 </html>
